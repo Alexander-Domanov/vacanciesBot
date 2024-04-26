@@ -47,8 +47,12 @@ function NodeGoogleSheets(file, sheetId, keyMass, fun) {
     })();
 }
 
-const saveData = ({date = 0, firstName = '', lastName = '', tg, message, agree = 'Нет'})=> NodeGoogleSheets('google_file.json', '1Slpm3j_yIhoxCjFA1pJYr9d-cle0nRTwylYh17kkxA4', {append: 'vacancies',
+const saveDataVacancies = ({date = 0, firstName = '', lastName = '', tg, message, agree = 'Нет'})=> NodeGoogleSheets('google_file.json', '1Slpm3j_yIhoxCjFA1pJYr9d-cle0nRTwylYh17kkxA4', {append: 'vacancies',
     change: [[date, firstName,lastName,`https://t.me/${tg}`,message, agree]]}, (data) => {
+})
+
+const saveWithoutData = ({date = 0, firstName = '', lastName = '', tg})=> NodeGoogleSheets('google_file.json', '1Slpm3j_yIhoxCjFA1pJYr9d-cle0nRTwylYh17kkxA4', {append: 'vacanciesWithoutData',
+    change: [[date, firstName,lastName,`https://t.me/${tg}`]]}, (data) => {
 })
 
 const TelegramAPI = require('node-telegram-bot-api')
@@ -59,7 +63,8 @@ const bot = new TelegramAPI('6993113566:AAGYi5kv5JMxpC2YVLIIneY_UG8F9KNmHng',
     }
 )
 
-const pattern = /^[\d\+][\d\(\)\ -.]{2,14}\d$|(5\.\s*|5\s*)?[\d\+][\d\(\)\s-.]{2,14}\d$/
+const pattern = /^[\d\+][\d\(\)\s-.]{2,14}\d.*$|(5\.\s*|5\s*)?[\d\+][\d\(\)\s-.]{2,14}\d.*$/;
+
 let userAgreeDataProcessing = false
 
 const start = () => {
@@ -85,7 +90,7 @@ const start = () => {
             '3. Город проживания. \n' +
             '4. Интересует ли вас полная или частичная занятость?\n' +
             '5. Ваш номер телефона (обязательно).'
-        const messageAgreeDataProcessing = `Для работы с ботом нужно ваше согласие на обработку персональных данных.\nЧто мы собираем?\nТолько ту информацию, которую вы укажете в сообщении.`
+        const messageAgreeDataProcessing = `Перед заполнением анкеты необходимо ваше согласие на обработку персональных данных (согласие на обратный звонок по вашему номеру телефона, который мы попросим оставить вас для связи и обсуждения деталей).`
 
         bot.on('callback_query', async (query) => {
             const messageChatID = query.message.chat.id
@@ -95,8 +100,10 @@ const start = () => {
             }
         })
         if (text === '/start') {
+            let s = new Date(dateUser * 1000).toLocaleString("ru")
             userAgreeDataProcessing = false
-            return await bot.sendMessage(chatID,
+            saveWithoutData({date: s, firstName: first_name,lastName: last_name,tg:username})
+            await bot.sendMessage(chatID,
                 `
                 ${'Приветствуем Вас, дорогой кандидат👋🏻\n'}${'Если Вы находитесь здесь, значит, мы нужны друг другу🫂\n'}${'Для начала, давайте с Вами познакомимся🙃\n\n'}${messageAgreeDataProcessing}`,
                 {
@@ -105,11 +112,19 @@ const start = () => {
                     }
                 }
             )
+            return await bot.sendMessage(chatID, 'Если вы не согласны оставить свой номер телефона для обратной связи, предлагаем вам напрямую связаться с отделом по персоналу.\n' +
+                '\n' +
+                'Сделать это можно по номеру:\n' +
+                '+375291342537 (рабочий)\n' +
+                '+375445772051 (Павел)\n' +
+                '\n' +
+                'или написать в ТГ:\n' +
+                '@Pashak86')
         }
         if (userAgreeDataProcessing) {
             if (text.match(pattern)) {
-                let s = new Date(dateUser * 1000).toLocaleDateString("ru")
-                saveData({date: s, firstName: first_name,lastName: last_name,tg:username,message: text, agree: 'Да'})
+                let s = new Date(dateUser * 1000).toLocaleString("ru")
+                saveDataVacancies({date: s, firstName: first_name,lastName: last_name,tg:username,message: text, agree: 'Да'})
                 userAgreeDataProcessing = false
                 return await bot.sendMessage(chatID, 'Благодарим за ваш отклик!)\n' +
                     'В течение дня наш специалист свяжется с Вами для обсуждения дальнейших действий.')
